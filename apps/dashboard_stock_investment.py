@@ -7,20 +7,29 @@
 #     "polars>=1.37.1",
 # ]
 # ///
+
 import marimo
 
 __generated_with = "0.19.6"
 app = marimo.App(
     width="columns",
-    layout_file="layouts/dashboard_stock_investement.grid.json",
+    layout_file="layouts/dashboard_stock_investment.grid.json",
 )
 
 with app.setup:
-    import micropip
+    # for bulishing on github pages it is recommended to have this in its own cell
+    import marimo as mo
 
 
 @app.cell
-def _(mo):
+def _():
+    import polars as pl
+    import altair as alt
+    return alt, pl
+
+
+@app.cell
+def _():
     mo.md(r"""
     # App elements
     """)
@@ -28,7 +37,7 @@ def _(mo):
 
 
 @app.cell
-def _(mo):
+def _():
     mo.md(r"""
     # Stock investment calculator
     """)
@@ -55,7 +64,7 @@ def _(ui_sliders_alternatives):
 
 
 @app.cell(column=1)
-def _(mo):
+def _():
     mo.md(r"""
     # Code that runs
     """)
@@ -63,7 +72,7 @@ def _(mo):
 
 
 @app.cell
-def _(MAX_SCENARIOS, mo):
+def _(MAX_SCENARIOS):
     get_scenarios, set_scenarios = mo.state(
         [
             {
@@ -79,13 +88,13 @@ def _(MAX_SCENARIOS, mo):
 
 
 @app.cell
-def _(mo):
+def _():
     get_visible_count, set_visible_count = mo.state(1)
     return get_visible_count, set_visible_count
 
 
 @app.cell
-def _(MAX_SCENARIOS, MIN_SCENARIOS, mo, set_visible_count):
+def _(MAX_SCENARIOS, MIN_SCENARIOS, set_visible_count):
     add_button = mo.ui.button(
         label="Add alternative",
         on_change=lambda _: set_visible_count(lambda count: min(count + 1, MAX_SCENARIOS)),
@@ -99,7 +108,7 @@ def _(MAX_SCENARIOS, MIN_SCENARIOS, mo, set_visible_count):
 
 
 @app.cell
-def _(create_scenario_sliders, get_scenarios, get_visible_count, mo):
+def _(create_scenario_sliders, get_scenarios, get_visible_count):
     scenarios = get_scenarios()
     visible_count = get_visible_count()
     alternatives = mo.ui.array(
@@ -122,7 +131,7 @@ def _(alternatives, pl, time_slider, wrapper_stock_investment_monthly):
 
 
 @app.cell
-def _(mo):
+def _():
     mo.md(r"""
     # Sliders
     """)
@@ -130,7 +139,7 @@ def _(mo):
 
 
 @app.cell
-def _(FULL_WIDTH, SHOW_VALUE, mo):
+def _(FULL_WIDTH, SHOW_VALUE):
     time_slider = mo.ui.slider(
         start=1,
         stop=30,
@@ -150,7 +159,6 @@ def _(
     add_button,
     alternatives,
     get_visible_count,
-    mo,
     remove_button,
     render_scenario_sliders,
 ):
@@ -182,27 +190,11 @@ def _(
 
 
 @app.cell(column=2)
-def _(mo):
+def _():
     mo.md(r"""
     # Functions and imports
     """)
     return
-
-
-@app.cell
-def _():
-    # for bulishing on github pages it is recommended to have this in its own cell
-    import marimo as mo
-    return (mo,)
-
-
-@app.cell
-async def _():
-    # this can apparently not be in the setup cell
-    await micropip.install("polars")
-    import polars as pl
-    import altair as alt
-    return alt, pl
 
 
 @app.cell
@@ -227,7 +219,7 @@ def _():
 
 
 @app.cell
-def _(COLORS, mo):
+def _(COLORS):
     def render_scenario_sliders(scenario_dict, color_index):
         color = COLORS[color_index % len(COLORS)]
         rendered_sliders = mo.hstack(
@@ -285,7 +277,7 @@ def _():
 
 
 @app.cell
-def _(creator_step_range, mo, set_scenarios):
+def _(creator_step_range, set_scenarios):
     def create_scenario_sliders(values, color_index):
         _show_value = True
         _full_width = True
@@ -417,7 +409,7 @@ def _(COLORS, alt, pl):
 
 
 @app.cell(column=3)
-def _(mo):
+def _():
     nav_menu = mo.nav_menu(
         {
             "/overview": "Overview",
@@ -429,7 +421,7 @@ def _(mo):
 
 
 @app.cell(column=4)
-def _(mo):
+def _():
     mo.md(r"""
     # Functions that i have/had in src/utils.py
     """)
