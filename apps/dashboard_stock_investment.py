@@ -47,22 +47,76 @@ def _():
 
 
 @app.cell
-def _(time_slider):
-    time_slider
+def _():
+    mo.sidebar(
+        [
+            mo.md("# Invest away"),
+            mo.nav_menu(
+                {
+                    "#/": "Home",
+                    "#/page1": "Stock investment",
+                    "#/page2": "Info",
+                },
+                orientation="vertical",
+            ),
+        ]
+    )
     return
 
 
 @app.cell
-def _(df_alternatives, plot):
-    figure = plot(df_alternatives=df_alternatives)
-    figure
+def _(stock_page):
+    def page1():
+        slider = mo.ui.slider(0, 10, 1, value=5, label="Select value")
+        # graph that depends on slider.value
+        plot = mo.md(f"Graph for value **{slider.value}** (put your plot here)")
+        return mo.vstack([mo.md("## Analysis"), slider, plot])
+
+
+    # Page 2: info text
+    def page2():
+        return mo.vstack(
+            [
+                mo.md("## Info"),
+                mo.md(
+                    "App is created for testing and learning puroses, there are no garante that there are no faults in the logic behind."
+                ),
+            ]
+        )
+
+
+    # Home page (optional)
+    def home():
+        header_text = mo.md("## Welcome to my investment calculator.")
+        main_text = mo.md(
+            "The only page that works for now is the stock investment page. It can show you how monthly investment can lead to big gains in the long run. You can also toy with alternative futures, by creating different scenarios and compare how the outcome changes in the long run."
+        )
+
+        return mo.vstack(items=[header_text, main_text])
+
+
+    # Route table: this is what changes when you click the menu
+    mo.routes(
+        {
+            "#/": home,
+            "#/page1": stock_page,
+            "#/page2": page2,
+            mo.routes.CATCH_ALL: home,
+        }
+    )
     return
 
 
 @app.cell
-def _(ui_sliders_alternatives):
-    ui_sliders_alternatives
-    return
+def _(figure, time_slider, ui_sliders_alternatives):
+    stock_page = mo.vstack(
+        items=[
+            mo.hstack(items=[figure, time_slider], align="center"),
+            ui_sliders_alternatives,
+        ]
+    )
+    stock_page
+    return (stock_page,)
 
 
 @app.cell(column=1)
@@ -189,6 +243,12 @@ def _(
         ]
     )
     return (ui_sliders_alternatives,)
+
+
+@app.cell
+def _(df_alternatives, plot):
+    figure = plot(df_alternatives=df_alternatives)
+    return (figure,)
 
 
 @app.cell(column=2)
