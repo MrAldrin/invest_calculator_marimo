@@ -1,0 +1,21 @@
+[project]
+name = "marimo-invest-dashboard"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "altair>=6",
+    "marimo>=0.19",
+    "numpy>=2.4",
+    "polars>=1.36",
+]
+
+[project.optional-dependencies]
+dev = [
+    "marimo[lsp]>=0.19",
+    "ipykernel",
+    "ruff",
+]
+
+
