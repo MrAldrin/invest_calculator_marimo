@@ -1,6 +1,15 @@
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "altair>=6.0.0",
+#     "marimo>=0.19.6",
+#     "numpy>=2.4.1",
+#     "polars>=1.37.1",
+# ]
+# ///
 import marimo
 
-__generated_with = "0.19.4"
+__generated_with = "0.19.6"
 app = marimo.App(
     width="columns",
     layout_file="layouts/dashboard_stock_investement.grid.json",
@@ -54,7 +63,7 @@ def _(mo):
 
 
 @app.cell
-def _(mo):
+def _(MAX_SCENARIOS, mo):
     get_scenarios, set_scenarios = mo.state(
         [
             {
@@ -64,7 +73,7 @@ def _(mo):
                 "annual_inflation": 2.0,
             }
         ]
-        * 4
+        * MAX_SCENARIOS
     )
     return get_scenarios, set_scenarios
 
@@ -76,15 +85,15 @@ def _(mo):
 
 
 @app.cell
-def _(mo, set_visible_count):
+def _(MAX_SCENARIOS, MIN_SCENARIOS, mo, set_visible_count):
     add_button = mo.ui.button(
         label="Add alternative",
-        on_change=lambda _: set_visible_count(lambda count: min(count + 1, 5)),
+        on_change=lambda _: set_visible_count(lambda count: min(count + 1, MAX_SCENARIOS)),
     )
 
     remove_button = mo.ui.button(
         label="Remove alternative",
-        on_change=lambda _: set_visible_count(lambda count: max(count - 1, 1)),
+        on_change=lambda _: set_visible_count(lambda count: max(count - 1, MIN_SCENARIOS)),
     )
     return add_button, remove_button
 
@@ -136,6 +145,8 @@ def _(FULL_WIDTH, SHOW_VALUE, mo):
 
 @app.cell
 def _(
+    MAX_SCENARIOS,
+    MIN_SCENARIOS,
     add_button,
     alternatives,
     get_visible_count,
@@ -146,9 +157,9 @@ def _(
     left_buttons = []
     right_buttons = []
 
-    if get_visible_count() < 5:
+    if get_visible_count() < MAX_SCENARIOS:
         left_buttons.append(add_button)
-    if get_visible_count() > 1:
+    if get_visible_count() > MIN_SCENARIOS:
         right_buttons.append(remove_button)
 
     ui_sliders_alternatives = mo.vstack(
@@ -196,6 +207,9 @@ async def _():
 
 @app.cell
 def _():
+    MIN_SCENARIOS = 1
+    MAX_SCENARIOS = 4
+
     COLORS = [
         "#3498db",  # blue
         "#e74c3c",  # red
@@ -209,7 +223,7 @@ def _():
 
     SHOW_VALUE = True
     FULL_WIDTH = True
-    return COLORS, FULL_WIDTH, SHOW_VALUE
+    return COLORS, FULL_WIDTH, MAX_SCENARIOS, MIN_SCENARIOS, SHOW_VALUE
 
 
 @app.cell

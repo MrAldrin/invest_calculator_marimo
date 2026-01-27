@@ -12,11 +12,11 @@ The exported files will be placed in the specified output directory (default: _s
 """
 
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.13"
 # dependencies = [
 #     "jinja2==3.1.3",
 #     "fire==0.7.0",
-#     "loguru==0.7.0"
+#     "loguru==0.7.0",
 # ]
 # ///
 
