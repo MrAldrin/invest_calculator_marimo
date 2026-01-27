@@ -17,7 +17,7 @@ app = marimo.App(
 )
 
 with app.setup:
-    # for bulishing on github pages it is recommended to have this in its own cell
+    # for publishing on github pages it is recommended to have this in its own cell
     import marimo as mo
 
 
@@ -25,7 +25,9 @@ with app.setup:
 def _():
     import polars as pl
     import altair as alt
-    return alt, pl
+    import numpy as np
+    import math
+    return alt, math, np, pl
 
 
 @app.cell
@@ -243,15 +245,12 @@ def _(COLORS):
 
 
 @app.cell
-def _():
-    import numpy as np
-    import math
-
-
+def _(math, np):
     def creator_step_range(min_val=1000, max_val=1e6):
         # zero is always included
-        a = 1.5
-        b = 3
+        a = 1
+        b = 2
+        c = 4
 
         values = [0]
 
@@ -264,8 +263,10 @@ def _():
             # fine steps
             values.extend(np.arange(a * magnitude, b * magnitude, magnitude / 10))
 
+            values.extend(np.arange(b * magnitude, c * magnitude, magnitude / 5))
+
             # coarser steps
-            values.extend(np.arange(b * magnitude, a * magnitude * 10, magnitude / 2))
+            values.extend(np.arange(c * magnitude, a * magnitude * 10, magnitude / 2))
 
             magnitude *= 10
 
