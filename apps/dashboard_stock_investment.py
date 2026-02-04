@@ -49,7 +49,8 @@ def _():
                 {
                     "#/": "Home",
                     "#/page1": "Stock investment",
-                    "#/page2": "Info",
+                    "#/page2": "Mortage",
+                    "#/page3": "Info",
                 },
                 orientation="vertical",
             ),
@@ -59,7 +60,7 @@ def _():
 
 
 @app.cell
-def _(stock_page):
+def _(page_mortgage, stock_page):
     # Page 2: info text
     def page2():
         return mo.vstack(
@@ -85,7 +86,8 @@ def _(stock_page):
         {
             "#/": home,
             "#/page1": stock_page,
-            "#/page2": page2,
+            "#/page2": page_mortgage,
+            "#/page3": page2,
             mo.routes.CATCH_ALL: home,
         }
     )
@@ -118,6 +120,18 @@ def _():
     # Mortgage calculator
     """)
     return
+
+
+@app.cell
+def _(figure, time_slider, ui_sliders_alternatives_mortgage):
+    page_mortgage = mo.vstack(
+        items=[
+            mo.hstack(items=[figure, time_slider], align="center"),
+            ui_sliders_alternatives_mortgage,
+        ]
+    )
+    page_mortgage
+    return (page_mortgage,)
 
 
 @app.cell(column=1, hide_code=True)
@@ -364,13 +378,8 @@ def _(MAX_SCENARIOS):
         ]
         * MAX_SCENARIOS
     )
-    return get_scenarios, set_scenarios
-
-
-@app.cell
-def _():
     get_visible_count, set_visible_count = mo.state(1)
-    return get_visible_count, set_visible_count
+    return get_scenarios, get_visible_count, set_scenarios, set_visible_count
 
 
 @app.cell
