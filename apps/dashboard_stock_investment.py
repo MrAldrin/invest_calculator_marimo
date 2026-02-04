@@ -72,6 +72,7 @@ def _(page_mortgage, stock_page):
             ]
         )
 
+
     # Home page (optional)
     def home():
         header_text = mo.md("## Welcome to my investment calculator.")
@@ -80,6 +81,7 @@ def _(page_mortgage, stock_page):
         )
 
         return mo.vstack(items=[header_text, main_text])
+
 
     # Route table: this is what changes when you click the menu
     mo.routes(
@@ -243,8 +245,7 @@ def _(creator_step_range):
             # Needed to not reset sliders when an alternative is added or removed
             on_change=lambda new_vals: scenario_setter(
                 lambda scenarios: [
-                    (new_vals if i == color_index else s)
-                    for i, s in enumerate(scenarios)
+                    (new_vals if i == color_index else s) for i, s in enumerate(scenarios)
                 ]
             ),
         )
@@ -292,24 +293,6 @@ def _(COLORS):
         )
         return colored_sliders
     return (render_scenario_sliders_mortgage,)
-
-
-@app.cell
-def _(MAX_SCENARIOS, MIN_SCENARIOS, set_visible_count_mortgage):
-    add_button_mortgage = mo.ui.button(
-        label="Add alternative",
-        on_change=lambda _: set_visible_count_mortgage(
-            lambda count: min(count + 1, MAX_SCENARIOS)
-        ),
-    )
-
-    remove_button_mortgage = mo.ui.button(
-        label="Remove alternative",
-        on_change=lambda _: set_visible_count_mortgage(
-            lambda count: max(count - 1, MIN_SCENARIOS)
-        ),
-    )
-    return add_button_mortgage, remove_button_mortgage
 
 
 @app.cell
@@ -383,24 +366,6 @@ def _(MAX_SCENARIOS):
 
 
 @app.cell
-def _(MAX_SCENARIOS, MIN_SCENARIOS, set_visible_count):
-    add_button = mo.ui.button(
-        label="Add alternative",
-        on_change=lambda _: set_visible_count(
-            lambda count: min(count + 1, MAX_SCENARIOS)
-        ),
-    )
-
-    remove_button = mo.ui.button(
-        label="Remove alternative",
-        on_change=lambda _: set_visible_count(
-            lambda count: max(count - 1, MIN_SCENARIOS)
-        ),
-    )
-    return add_button, remove_button
-
-
-@app.cell
 def _(
     create_scenario_sliders_stock_investment,
     get_scenarios,
@@ -459,19 +424,19 @@ def _(FULL_WIDTH, SHOW_VALUE):
 def _(
     MAX_SCENARIOS,
     MIN_SCENARIOS,
-    add_button,
+    add_button_stock,
     alternatives,
     get_visible_count,
-    remove_button,
+    remove_button_stock,
     render_scenario_sliders,
 ):
     left_buttons = []
     right_buttons = []
 
     if get_visible_count() < MAX_SCENARIOS:
-        left_buttons.append(add_button)
+        left_buttons.append(add_button_stock)
     if get_visible_count() > MIN_SCENARIOS:
-        right_buttons.append(remove_button)
+        right_buttons.append(remove_button_stock)
 
     ui_sliders_alternatives = mo.vstack(
         [
@@ -498,7 +463,42 @@ def _(df_alternatives, plot):
     return (figure,)
 
 
-@app.cell(column=3, hide_code=True)
+@app.cell(column=3)
+def _(MAX_SCENARIOS, MIN_SCENARIOS, set_visible_count):
+    def create_add_remove_buttons(set_visible_count_fn):
+        add_button = mo.ui.button(
+            label="Add alternative",
+            on_change=lambda _: set_visible_count_fn(
+                lambda count: min(count + 1, MAX_SCENARIOS)
+            ),
+        )
+        remove_button = mo.ui.button(
+            label="Remove alternative",
+            on_change=lambda _: set_visible_count(
+                lambda count: max(count - 1, MIN_SCENARIOS)
+            ),
+        )
+        return add_button, remove_button
+    return (create_add_remove_buttons,)
+
+
+@app.cell
+def _(
+    create_add_remove_buttons,
+    set_visible_count,
+    set_visible_count_mortgage,
+):
+    add_button_stock, remove_button_stock = create_add_remove_buttons(set_visible_count)
+    add_button_mortgage, remove_button_mortgage = create_add_remove_buttons(set_visible_count_mortgage)
+    return (
+        add_button_mortgage,
+        add_button_stock,
+        remove_button_mortgage,
+        remove_button_stock,
+    )
+
+
+@app.cell(column=4, hide_code=True)
 def _():
     mo.md(r"""
     # Functions and imports
@@ -648,8 +648,7 @@ def _(creator_step_range):
             # When ANY slider changes, update ONLY this scenario's data
             on_change=lambda new_vals: scenario_setter(
                 lambda scenarios: [
-                    (new_vals if i == color_index else s)
-                    for i, s in enumerate(scenarios)
+                    (new_vals if i == color_index else s) for i, s in enumerate(scenarios)
                 ]
             ),
         )
@@ -734,7 +733,7 @@ def _(COLORS, alt, pl):
     return (plot,)
 
 
-@app.cell(column=4, hide_code=True)
+@app.cell(column=5, hide_code=True)
 def _():
     mo.md(r"""
     # Functions that i have/had in src/utils.py
@@ -806,10 +805,7 @@ def _(apply_inflation, pl, timer):
                     (
                         initial_investment * ((1 + monthly_return) ** pl.col("month"))
                         + monthly_contribution
-                        * (
-                            ((1 + monthly_return) ** pl.col("month") - 1)
-                            / monthly_return
-                        )
+                        * (((1 + monthly_return) ** pl.col("month") - 1) / monthly_return)
                     ).alias("balance"),
                     # Contributions: simple linear growth
                     (initial_investment + monthly_contribution * pl.col("month")).alias(
@@ -819,17 +815,14 @@ def _(apply_inflation, pl, timer):
             )
             .with_columns(
                 [
-                    (pl.col("balance") - pl.col("contributions_cum")).alias(
-                        "returns_cum"
-                    ),
+                    (pl.col("balance") - pl.col("contributions_cum")).alias("returns_cum"),
                 ]
             )
             .with_columns(
                 [
                     (pl.col("returns_cum") * (1 - tax_rate)).alias("returns_after_tax"),
                     (
-                        pl.col("contributions_cum")
-                        + pl.col("returns_cum") * (1 - tax_rate)
+                        pl.col("contributions_cum") + pl.col("returns_cum") * (1 - tax_rate)
                     ).alias("stock_equity"),
                 ]
             )
