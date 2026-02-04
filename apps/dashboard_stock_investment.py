@@ -105,11 +105,11 @@ def _():
 
 
 @app.cell
-def _(figure, time_slider, ui_sliders_alternatives):
+def _(figure, time_slider, ui_sliders_stock):
     stock_page = mo.vstack(
         items=[
             mo.hstack(items=[figure, time_slider], align="center"),
-            ui_sliders_alternatives,
+            ui_sliders_stock,
         ]
     )
     stock_page
@@ -125,11 +125,11 @@ def _():
 
 
 @app.cell
-def _(figure, time_slider, ui_sliders_alternatives_mortgage):
+def _(figure, time_slider, ui_sliders_mortgage):
     page_mortgage = mo.vstack(
         items=[
             mo.hstack(items=[figure, time_slider], align="center"),
-            ui_sliders_alternatives_mortgage,
+            ui_sliders_mortgage,
         ]
     )
     page_mortgage
@@ -153,7 +153,7 @@ def _():
 
 
 @app.cell
-def _():
+def _(create_add_remove_buttons):
     default_slider_vals_mortgage = {
         "loan_amount": 3_000_000,
         "annual_interest_rate": 4.0,
@@ -167,12 +167,36 @@ def _():
         get_visible_count_mortgage,
         set_visible_count_mortgage,
     ) = create_scenario_manager(default_slider_vals_mortgage)
+
+    add_button_mortgage, remove_button_mortgage = create_add_remove_buttons(
+        set_visible_count_mortgage
+    )
     return (
+        add_button_mortgage,
         get_scenarios_mortgage,
         get_visible_count_mortgage,
+        remove_button_mortgage,
         set_scenarios_mortgage,
-        set_visible_count_mortgage,
     )
+
+
+@app.cell
+def _(
+    add_button_mortgage,
+    alternatives_mortgage,
+    create_slider_ui,
+    get_visible_count_mortgage,
+    remove_button_mortgage,
+    render_scenario_sliders_mortgage,
+):
+    ui_sliders_mortgage = create_slider_ui(
+        alternatives_mortgage,
+        render_scenario_sliders_mortgage,
+        get_visible_count_mortgage,
+        add_button_mortgage,
+        remove_button_mortgage,
+    )
+    return (ui_sliders_mortgage,)
 
 
 @app.cell
@@ -295,50 +319,6 @@ def _(COLORS):
     return (render_scenario_sliders_mortgage,)
 
 
-@app.cell
-def _(
-    MAX_SCENARIOS,
-    MIN_SCENARIOS,
-    add_button_mortgage,
-    alternatives_mortgage,
-    get_visible_count_mortgage,
-    left_buttons,
-    remove_button_mortgage,
-    render_scenario_sliders_mortgage,
-):
-    left_buttons_mortgage = []
-    right_buttons_mortgage = []
-
-    if get_visible_count_mortgage() < MAX_SCENARIOS:
-        left_buttons_mortgage.append(add_button_mortgage)
-    if get_visible_count_mortgage() > MIN_SCENARIOS:
-        right_buttons_mortgage.append(remove_button_mortgage)
-
-    ui_sliders_alternatives_mortgage = mo.vstack(
-        [
-            *[
-                render_scenario_sliders_mortgage(alternative, i)
-                for i, alternative in enumerate(alternatives_mortgage)
-            ],
-            mo.hstack(
-                [
-                    mo.hstack(left_buttons_mortgage) if left_buttons else mo.Html(""),
-                    mo.hstack(right_buttons_mortgage, justify="end")
-                    if right_buttons_mortgage
-                    else mo.Html(""),
-                ]
-            ),
-        ]
-    )
-    return (ui_sliders_alternatives_mortgage,)
-
-
-@app.cell
-def _(ui_sliders_alternatives_mortgage):
-    ui_sliders_alternatives_mortgage
-    return
-
-
 @app.cell(column=2, hide_code=True)
 def _():
     mo.md(r"""
@@ -347,8 +327,16 @@ def _():
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _():
+    mo.md(r"""
+    ## Stock investment calculator
+    """)
+    return
+
+
+@app.cell
+def _(create_add_remove_buttons):
     default_slider_vals_stock = {
         "initial_stock_investment": 500_000,
         "monthly_stock_investment": 5_000,
@@ -362,12 +350,36 @@ def _():
         get_visible_count_stock,
         set_visible_count_stock,
     ) = create_scenario_manager(default_slider_vals_stock)
+
+    add_button_stock, remove_button_stock = create_add_remove_buttons(
+        set_visible_count_stock
+    )
     return (
+        add_button_stock,
         get_scenarios_stock,
         get_visible_count_stock,
+        remove_button_stock,
         set_scenarios_stock,
-        set_visible_count_stock,
     )
+
+
+@app.cell
+def _(
+    add_button_stock,
+    alternatives_stock,
+    create_slider_ui,
+    get_visible_count_stock,
+    remove_button_stock,
+    render_scenario_sliders_stock,
+):
+    ui_sliders_stock = create_slider_ui(
+        alternatives_stock,
+        render_scenario_sliders_stock,
+        get_visible_count_stock,
+        add_button_stock,
+        remove_button_stock,
+    )
+    return (ui_sliders_stock,)
 
 
 @app.cell
@@ -381,7 +393,7 @@ def _(
     scenarios = get_scenarios_stock()
     visible_count = get_visible_count_stock()
 
-    alternatives = mo.ui.array(
+    alternatives_stock = mo.ui.array(
         [
             create_scenario_sliders_stock_investment(
                 values=s, color_index=i, scenario_setter=set_scenarios_stock
@@ -389,14 +401,14 @@ def _(
             for i, s in enumerate(scenarios[:visible_count])
         ]
     )
-    return (alternatives,)
+    return (alternatives_stock,)
 
 
 @app.cell
-def _(alternatives, pl, time_slider, wrapper_stock_investment_monthly):
+def _(alternatives_stock, pl, time_slider, wrapper_stock_investment_monthly):
     # === USE DATA ===
     df_alternatives = []
-    for i, alternative in enumerate(alternatives):
+    for i, alternative in enumerate(alternatives_stock):
         df = wrapper_stock_investment_monthly(alternative, time_slider)
         df = df.with_columns(pl.lit(f"Alternative {i + 1}").alias("Alternative"))
         df_alternatives.append(df)
@@ -426,57 +438,20 @@ def _(FULL_WIDTH, SHOW_VALUE):
 
 
 @app.cell
-def _(
-    MAX_SCENARIOS,
-    MIN_SCENARIOS,
-    add_button_stock,
-    alternatives,
-    get_visible_count_stock,
-    remove_button_stock,
-    render_scenario_sliders,
-):
-    left_buttons = []
-    right_buttons = []
-
-    if get_visible_count_stock() < MAX_SCENARIOS:
-        left_buttons.append(add_button_stock)
-    if get_visible_count_stock() > MIN_SCENARIOS:
-        right_buttons.append(remove_button_stock)
-
-    ui_sliders_alternatives = mo.vstack(
-        [
-            *[
-                render_scenario_sliders(alternative, i)
-                for i, alternative in enumerate(alternatives)
-            ],
-            mo.hstack(
-                [
-                    mo.hstack(left_buttons) if left_buttons else mo.Html(""),
-                    mo.hstack(right_buttons, justify="end")
-                    if right_buttons
-                    else mo.Html(""),
-                ]
-            ),
-        ]
-    )
-    return left_buttons, ui_sliders_alternatives
-
-
-@app.cell
 def _(df_alternatives, plot):
     figure = plot(df_alternatives=df_alternatives)
     return (figure,)
 
 
 @app.function(column=3)
-def create_scenario_manager(default_values, max_scenarios=4):
+def create_scenario_manager(default_values, max_scenarios: int = 4):
     get_scenarios, set_scenarios = mo.state([default_values] * max_scenarios)
     get_visible_count, set_visible_count = mo.state(1)
     return get_scenarios, set_scenarios, get_visible_count, set_visible_count
 
 
 @app.cell
-def _(MAX_SCENARIOS, MIN_SCENARIOS, set_visible_count):
+def _(MAX_SCENARIOS, MIN_SCENARIOS):
     def create_add_remove_buttons(set_visible_count_fn):
         add_button = mo.ui.button(
             label="Add alternative",
@@ -486,7 +461,7 @@ def _(MAX_SCENARIOS, MIN_SCENARIOS, set_visible_count):
         )
         remove_button = mo.ui.button(
             label="Remove alternative",
-            on_change=lambda _: set_visible_count(
+            on_change=lambda _: set_visible_count_fn(
                 lambda count: max(count - 1, MIN_SCENARIOS)
             ),
         )
@@ -495,23 +470,32 @@ def _(MAX_SCENARIOS, MIN_SCENARIOS, set_visible_count):
 
 
 @app.cell
-def _(
-    create_add_remove_buttons,
-    set_visible_count_mortgage,
-    set_visible_count_stock,
-):
-    add_button_stock, remove_button_stock = create_add_remove_buttons(
-        set_visible_count_stock
-    )
-    add_button_mortgage, remove_button_mortgage = create_add_remove_buttons(
-        set_visible_count_mortgage
-    )
-    return (
-        add_button_mortgage,
-        add_button_stock,
-        remove_button_mortgage,
-        remove_button_stock,
-    )
+def _(MAX_SCENARIOS, MIN_SCENARIOS):
+    def create_slider_ui(
+        alternatives, render_fn, get_visible_count_fn, add_button, remove_button
+    ):
+        left_buttons = []
+        right_buttons = []
+        if get_visible_count_fn() < MAX_SCENARIOS:
+            left_buttons.append(add_button)
+        if get_visible_count_fn() > MIN_SCENARIOS:
+            right_buttons.append(remove_button)
+
+        ui_sliders_alternatives = mo.vstack(
+            [
+                *[render_fn(alternative, i) for i, alternative in enumerate(alternatives)],
+                mo.hstack(
+                    [
+                        mo.hstack(left_buttons) if left_buttons else mo.Html(""),
+                        mo.hstack(right_buttons, justify="end")
+                        if right_buttons
+                        else mo.Html(""),
+                    ]
+                ),
+            ]
+        )
+        return ui_sliders_alternatives
+    return (create_slider_ui,)
 
 
 @app.cell(column=4, hide_code=True)
@@ -561,7 +545,7 @@ def _():
 
 @app.cell
 def _(COLORS):
-    def render_scenario_sliders(scenario_dict, color_index):
+    def render_scenario_sliders_stock(scenario_dict, color_index):
         color = COLORS[color_index % len(COLORS)]
         rendered_sliders = mo.hstack(
             [
@@ -580,7 +564,7 @@ def _(COLORS):
             }
         )
         return colored_sliders
-    return (render_scenario_sliders,)
+    return (render_scenario_sliders_stock,)
 
 
 @app.cell
