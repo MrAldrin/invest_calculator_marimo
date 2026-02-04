@@ -153,20 +153,20 @@ def _():
 
 
 @app.cell
-def _(MAX_SCENARIOS):
-    get_scenarios_mortgage, set_scenarios_mortgage = mo.state(
-        [
-            {
-                "loan_amount": 3_000_000,
-                "annual_interest_rate": 4.0,
-                "loan_term_years": 25,
-                "annual_inflation": 2.0,
-            }
-        ]
-        * MAX_SCENARIOS
-    )
+def _():
+    default_slider_vals_mortgage = {
+        "loan_amount": 3_000_000,
+        "annual_interest_rate": 4.0,
+        "loan_term_years": 25,
+        "annual_inflation": 2.0,
+    }
 
-    get_visible_count_mortgage, set_visible_count_mortgage = mo.state(1)
+    (
+        get_scenarios_mortgage,
+        set_scenarios_mortgage,
+        get_visible_count_mortgage,
+        set_visible_count_mortgage,
+    ) = create_scenario_manager(default_slider_vals_mortgage)
     return (
         get_scenarios_mortgage,
         get_visible_count_mortgage,
@@ -348,38 +348,43 @@ def _():
 
 
 @app.cell
-def _(MAX_SCENARIOS):
-    # === STATE ===
-    get_scenarios, set_scenarios = mo.state(
-        [
-            {
-                "initial_stock_investment": 500_000,
-                "monthly_stock_investment": 5_000,
-                "annual_stock_return": 10.0,
-                "annual_inflation": 2.0,
-            }
-        ]
-        * MAX_SCENARIOS
+def _():
+    default_slider_vals_stock = {
+        "initial_stock_investment": 500_000,
+        "monthly_stock_investment": 5_000,
+        "annual_stock_return": 10.0,
+        "annual_inflation": 2.0,
+    }
+
+    (
+        get_scenarios_stock,
+        set_scenarios_stock,
+        get_visible_count_stock,
+        set_visible_count_stock,
+    ) = create_scenario_manager(default_slider_vals_stock)
+    return (
+        get_scenarios_stock,
+        get_visible_count_stock,
+        set_scenarios_stock,
+        set_visible_count_stock,
     )
-    get_visible_count, set_visible_count = mo.state(1)
-    return get_scenarios, get_visible_count, set_scenarios, set_visible_count
 
 
 @app.cell
 def _(
     create_scenario_sliders_stock_investment,
-    get_scenarios,
-    get_visible_count,
-    set_scenarios,
+    get_scenarios_stock,
+    get_visible_count_stock,
+    set_scenarios_stock,
 ):
     # === BUILD UI ===
-    scenarios = get_scenarios()
-    visible_count = get_visible_count()
+    scenarios = get_scenarios_stock()
+    visible_count = get_visible_count_stock()
 
     alternatives = mo.ui.array(
         [
             create_scenario_sliders_stock_investment(
-                values=s, color_index=i, scenario_setter=set_scenarios
+                values=s, color_index=i, scenario_setter=set_scenarios_stock
             )
             for i, s in enumerate(scenarios[:visible_count])
         ]
@@ -426,16 +431,16 @@ def _(
     MIN_SCENARIOS,
     add_button_stock,
     alternatives,
-    get_visible_count,
+    get_visible_count_stock,
     remove_button_stock,
     render_scenario_sliders,
 ):
     left_buttons = []
     right_buttons = []
 
-    if get_visible_count() < MAX_SCENARIOS:
+    if get_visible_count_stock() < MAX_SCENARIOS:
         left_buttons.append(add_button_stock)
-    if get_visible_count() > MIN_SCENARIOS:
+    if get_visible_count_stock() > MIN_SCENARIOS:
         right_buttons.append(remove_button_stock)
 
     ui_sliders_alternatives = mo.vstack(
@@ -463,7 +468,14 @@ def _(df_alternatives, plot):
     return (figure,)
 
 
-@app.cell(column=3)
+@app.function(column=3)
+def create_scenario_manager(default_values, max_scenarios=4):
+    get_scenarios, set_scenarios = mo.state([default_values] * max_scenarios)
+    get_visible_count, set_visible_count = mo.state(1)
+    return get_scenarios, set_scenarios, get_visible_count, set_visible_count
+
+
+@app.cell
 def _(MAX_SCENARIOS, MIN_SCENARIOS, set_visible_count):
     def create_add_remove_buttons(set_visible_count_fn):
         add_button = mo.ui.button(
@@ -485,11 +497,15 @@ def _(MAX_SCENARIOS, MIN_SCENARIOS, set_visible_count):
 @app.cell
 def _(
     create_add_remove_buttons,
-    set_visible_count,
     set_visible_count_mortgage,
+    set_visible_count_stock,
 ):
-    add_button_stock, remove_button_stock = create_add_remove_buttons(set_visible_count)
-    add_button_mortgage, remove_button_mortgage = create_add_remove_buttons(set_visible_count_mortgage)
+    add_button_stock, remove_button_stock = create_add_remove_buttons(
+        set_visible_count_stock
+    )
+    add_button_mortgage, remove_button_mortgage = create_add_remove_buttons(
+        set_visible_count_mortgage
+    )
     return (
         add_button_mortgage,
         add_button_stock,
