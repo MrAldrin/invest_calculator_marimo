@@ -49,7 +49,7 @@ def _():
                 {
                     "#/": "Home",
                     "#/page1": "Stock investment",
-                    "#/page2": "Mortage",
+                    "#/page2": "Mortage cost",
                     "#/page3": "Info",
                 },
                 orientation="vertical",
@@ -181,6 +181,30 @@ def _(create_add_remove_buttons):
 
 
 @app.cell
+def _(COLORS):
+    def render_scenario_sliders_mortgage(scenario_dict, color_index):
+        color = COLORS[color_index % len(COLORS)]
+        rendered_sliders = mo.hstack(
+            [
+                scenario_dict["loan_amount"],
+                scenario_dict["annual_interest_rate"],
+                scenario_dict["loan_term_years"],
+                scenario_dict["annual_inflation"],
+            ]
+        )
+        # return rendered_sliders
+        colored_sliders = mo.vstack([rendered_sliders]).style(
+            {
+                "border-left": f"4px solid {color}",
+                "padding-left": "10px",
+                "margin": "10px 0",
+            }
+        )
+        return colored_sliders
+    return (render_scenario_sliders_mortgage,)
+
+
+@app.cell
 def _(
     add_button_mortgage,
     alternatives_mortgage,
@@ -295,30 +319,6 @@ def _(alternatives_mortgage, mortgage_monthly, pl):
     return
 
 
-@app.cell
-def _(COLORS):
-    def render_scenario_sliders_mortgage(scenario_dict, color_index):
-        color = COLORS[color_index % len(COLORS)]
-        rendered_sliders = mo.hstack(
-            [
-                scenario_dict["loan_amount"],
-                scenario_dict["annual_interest_rate"],
-                scenario_dict["loan_term_years"],
-                scenario_dict["annual_inflation"],
-            ]
-        )
-        # return rendered_sliders
-        colored_sliders = mo.vstack([rendered_sliders]).style(
-            {
-                "border-left": f"4px solid {color}",
-                "padding-left": "10px",
-                "margin": "10px 0",
-            }
-        )
-        return colored_sliders
-    return (render_scenario_sliders_mortgage,)
-
-
 @app.cell(column=2, hide_code=True)
 def _():
     mo.md(r"""
@@ -364,6 +364,30 @@ def _(create_add_remove_buttons):
 
 
 @app.cell
+def _(COLORS):
+    def render_scenario_sliders_stock(scenario_dict, color_index):
+        color = COLORS[color_index % len(COLORS)]
+        rendered_sliders = mo.hstack(
+            [
+                scenario_dict["initial_stock_investment"],
+                scenario_dict["monthly_stock_investment"],
+                scenario_dict["annual_stock_return"],
+                scenario_dict["annual_inflation"],
+            ]
+        )
+        # return rendered_sliders
+        colored_sliders = mo.vstack([rendered_sliders]).style(
+            {
+                "border-left": f"4px solid {color}",
+                "padding-left": "10px",
+                "margin": "10px 0",
+            }
+        )
+        return colored_sliders
+    return (render_scenario_sliders_stock,)
+
+
+@app.cell
 def _(
     add_button_stock,
     alternatives_stock,
@@ -390,7 +414,7 @@ def _(
     set_scenarios_stock,
 ):
     # === BUILD UI ===
-    scenarios = get_scenarios_stock()
+    scenarios_stock = get_scenarios_stock()
     visible_count = get_visible_count_stock()
 
     alternatives_stock = mo.ui.array(
@@ -398,10 +422,66 @@ def _(
             create_scenario_sliders_stock_investment(
                 values=s, color_index=i, scenario_setter=set_scenarios_stock
             )
-            for i, s in enumerate(scenarios[:visible_count])
+            for i, s in enumerate(scenarios_stock[:visible_count])
         ]
     )
     return (alternatives_stock,)
+
+
+@app.cell
+def _(creator_step_range):
+    # === SLIDER CREATOR ===
+    def create_scenario_sliders_stock_investment(values, color_index, scenario_setter):
+        _show_value = True
+        _full_width = True
+        slider_dict = mo.ui.dictionary(
+            {
+                "initial_stock_investment": mo.ui.slider(
+                    steps=creator_step_range(min_val=1e4, max_val=1e7),
+                    value=values["initial_stock_investment"],
+                    debounce=True,
+                    show_value=_show_value,
+                    full_width=_full_width,
+                    label=f"Initial stock investment",
+                ),
+                "monthly_stock_investment": mo.ui.slider(
+                    steps=creator_step_range(min_val=1e2, max_val=1e6),
+                    value=values["monthly_stock_investment"],
+                    debounce=True,
+                    show_value=_show_value,
+                    full_width=_full_width,
+                    label=f"Monthly stock investment",
+                ),
+                "annual_stock_return": mo.ui.slider(
+                    start=0.0,
+                    stop=15.0,
+                    value=values["annual_stock_return"],
+                    step=0.5,
+                    debounce=True,
+                    show_value=_show_value,
+                    full_width=_full_width,
+                    label="Annual stock return (%)",
+                ),
+                "annual_inflation": mo.ui.slider(
+                    start=0.0,
+                    stop=10.0,
+                    value=values["annual_inflation"],
+                    step=0.1,
+                    debounce=True,
+                    show_value=_show_value,
+                    full_width=_full_width,
+                    label="Annual inflation (%)",
+                ),
+            },
+            # When ANY slider changes, update ONLY this scenario's data
+            on_change=lambda new_vals: scenario_setter(
+                lambda scenarios: [
+                    (new_vals if i == color_index else s) for i, s in enumerate(scenarios)
+                ]
+            ),
+        )
+        return slider_dict
+    return (create_scenario_sliders_stock_investment,)
 
 
 @app.cell
@@ -443,7 +523,15 @@ def _(df_alternatives, plot):
     return (figure,)
 
 
-@app.function(column=3)
+@app.cell(column=3, hide_code=True)
+def _():
+    mo.md(r"""
+    # Common functions for scenario sliders
+    """)
+    return
+
+
+@app.function
 def create_scenario_manager(default_values, max_scenarios: int = 4):
     get_scenarios, set_scenarios = mo.state([default_values] * max_scenarios)
     get_visible_count, set_visible_count = mo.state(1)
@@ -544,30 +632,6 @@ def _():
 
 
 @app.cell
-def _(COLORS):
-    def render_scenario_sliders_stock(scenario_dict, color_index):
-        color = COLORS[color_index % len(COLORS)]
-        rendered_sliders = mo.hstack(
-            [
-                scenario_dict["initial_stock_investment"],
-                scenario_dict["monthly_stock_investment"],
-                scenario_dict["annual_stock_return"],
-                scenario_dict["annual_inflation"],
-            ]
-        )
-        # return rendered_sliders
-        colored_sliders = mo.vstack([rendered_sliders]).style(
-            {
-                "border-left": f"4px solid {color}",
-                "padding-left": "10px",
-                "margin": "10px 0",
-            }
-        )
-        return colored_sliders
-    return (render_scenario_sliders_stock,)
-
-
-@app.cell
 def _(math, np):
     def creator_step_range(min_val=1000, max_val=1e6):
         # zero is always included
@@ -598,62 +662,6 @@ def _(math, np):
         values = values[(values == 0) | ((values >= min_val) & (values <= max_val))]
         return np.unique(values).tolist()
     return (creator_step_range,)
-
-
-@app.cell
-def _(creator_step_range):
-    # === SLIDER CREATOR ===
-    def create_scenario_sliders_stock_investment(values, color_index, scenario_setter):
-        _show_value = True
-        _full_width = True
-        slider_dict = mo.ui.dictionary(
-            {
-                "initial_stock_investment": mo.ui.slider(
-                    steps=creator_step_range(min_val=1e4, max_val=1e7),
-                    value=values["initial_stock_investment"],
-                    debounce=True,
-                    show_value=_show_value,
-                    full_width=_full_width,
-                    label=f"Initial stock investment",
-                ),
-                "monthly_stock_investment": mo.ui.slider(
-                    steps=creator_step_range(min_val=1e2, max_val=1e6),
-                    value=values["monthly_stock_investment"],
-                    debounce=True,
-                    show_value=_show_value,
-                    full_width=_full_width,
-                    label=f"Monthly stock investment",
-                ),
-                "annual_stock_return": mo.ui.slider(
-                    start=0.0,
-                    stop=15.0,
-                    value=values["annual_stock_return"],
-                    step=0.5,
-                    debounce=True,
-                    show_value=_show_value,
-                    full_width=_full_width,
-                    label="Annual stock return (%)",
-                ),
-                "annual_inflation": mo.ui.slider(
-                    start=0.0,
-                    stop=10.0,
-                    value=values["annual_inflation"],
-                    step=0.1,
-                    debounce=True,
-                    show_value=_show_value,
-                    full_width=_full_width,
-                    label="Annual inflation (%)",
-                ),
-            },
-            # When ANY slider changes, update ONLY this scenario's data
-            on_change=lambda new_vals: scenario_setter(
-                lambda scenarios: [
-                    (new_vals if i == color_index else s) for i, s in enumerate(scenarios)
-                ]
-            ),
-        )
-        return slider_dict
-    return (create_scenario_sliders_stock_investment,)
 
 
 @app.cell
