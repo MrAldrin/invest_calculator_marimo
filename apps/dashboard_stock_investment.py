@@ -236,9 +236,14 @@ def _(
     alternatives_mortgage = mo.ui.array(
         [
             create_scenario_sliders_mortgage(
-                values=s, color_index=i, scenario_setter=set_scenarios_mortgage
+                loan_amount=scenario["loan_amount"],
+                anual_interest_rate=scenario["annual_interest_rate"],
+                loan_term_years=scenario["loan_term_years"],
+                annual_inflation=scenario["annual_inflation"],
+                color_index=i,
+                scenario_setter=set_scenarios_mortgage,
             )
-            for i, s in enumerate(scenarios_mortgage[:visible_count_mortgage])
+            for i, scenario in enumerate(scenarios_mortgage[:visible_count_mortgage])
         ]
     )
     return (alternatives_mortgage,)
@@ -246,14 +251,21 @@ def _(
 
 @app.cell
 def _(creator_step_range):
-    def create_scenario_sliders_mortgage(values, color_index, scenario_setter):
+    def create_scenario_sliders_mortgage(
+        loan_amount,
+        anual_interest_rate,
+        loan_term_years,
+        annual_inflation,
+        color_index,
+        scenario_setter,
+    ):
         _show_value = True
         _full_width = True
         slider_dict = mo.ui.dictionary(
             {
                 "loan_amount": mo.ui.slider(
                     steps=creator_step_range(min_val=1e6, max_val=1e8),
-                    value=values["loan_amount"],
+                    value=loan_amount,
                     debounce=True,
                     show_value=_show_value,
                     full_width=_full_width,
@@ -263,7 +275,7 @@ def _(creator_step_range):
                     start=0.0,
                     stop=10.0,
                     step=0.25,
-                    value=values["annual_interest_rate"],
+                    value=anual_interest_rate,
                     debounce=True,
                     show_value=_show_value,
                     full_width=_full_width,
@@ -272,7 +284,7 @@ def _(creator_step_range):
                 "loan_term_years": mo.ui.slider(
                     start=0.0,
                     stop=40.0,
-                    value=values["loan_term_years"],
+                    value=loan_term_years,
                     step=1,
                     debounce=True,
                     show_value=_show_value,
@@ -282,7 +294,7 @@ def _(creator_step_range):
                 "annual_inflation": mo.ui.slider(
                     start=0.0,
                     stop=10.0,
-                    value=values["annual_inflation"],
+                    value=annual_inflation,
                     step=0.1,
                     debounce=True,
                     show_value=_show_value,
@@ -304,12 +316,12 @@ def _(creator_step_range):
 @app.cell
 def _(alternatives_mortgage, mortgage_monthly, pl):
     df_alternatives_mortgage = []
-    for j, alternative_mortgage in enumerate(alternatives_mortgage):
+    for j, _alternative in enumerate(alternatives_mortgage):
         df_mortgage = mortgage_monthly(
-            loan_amount=alternative_mortgage["loan_amount"].value,
-            annual_interest_rate=alternative_mortgage["annual_interest_rate"].value,
-            loan_term_years=int(alternative_mortgage["loan_term_years"].value),
-            annual_inflation=alternative_mortgage["annual_inflation"].value,
+            loan_amount=_alternative["loan_amount"].value,
+            annual_interest_rate=_alternative["annual_interest_rate"].value,
+            loan_term_years=int(_alternative["loan_term_years"].value),
+            annual_inflation=_alternative["annual_inflation"].value,
             rentefradrag=False,
         )
         df_mortgage = df_mortgage.with_columns(
@@ -420,9 +432,14 @@ def _(
     alternatives_stock = mo.ui.array(
         [
             create_scenario_sliders_stock_investment(
-                values=s, color_index=i, scenario_setter=set_scenarios_stock
+                initial_stock_investment=scenario["initial_stock_investment"],
+                monthly_stock_investment=scenario["monthly_stock_investment"],
+                annual_stock_return=scenario["annual_stock_return"],
+                annual_inflation=scenario["annual_inflation"],
+                color_index=i,
+                scenario_setter=set_scenarios_stock,
             )
-            for i, s in enumerate(scenarios_stock[:visible_count])
+            for i, scenario in enumerate(scenarios_stock[:visible_count])
         ]
     )
     return (alternatives_stock,)
@@ -431,14 +448,21 @@ def _(
 @app.cell
 def _(creator_step_range):
     # === SLIDER CREATOR ===
-    def create_scenario_sliders_stock_investment(values, color_index, scenario_setter):
+    def create_scenario_sliders_stock_investment(
+        initial_stock_investment,
+        monthly_stock_investment,
+        annual_stock_return,
+        annual_inflation,
+        color_index,
+        scenario_setter,
+    ):
         _show_value = True
         _full_width = True
         slider_dict = mo.ui.dictionary(
             {
                 "initial_stock_investment": mo.ui.slider(
                     steps=creator_step_range(min_val=1e4, max_val=1e7),
-                    value=values["initial_stock_investment"],
+                    value=initial_stock_investment,
                     debounce=True,
                     show_value=_show_value,
                     full_width=_full_width,
@@ -446,7 +470,7 @@ def _(creator_step_range):
                 ),
                 "monthly_stock_investment": mo.ui.slider(
                     steps=creator_step_range(min_val=1e2, max_val=1e6),
-                    value=values["monthly_stock_investment"],
+                    value=monthly_stock_investment,
                     debounce=True,
                     show_value=_show_value,
                     full_width=_full_width,
@@ -455,7 +479,7 @@ def _(creator_step_range):
                 "annual_stock_return": mo.ui.slider(
                     start=0.0,
                     stop=15.0,
-                    value=values["annual_stock_return"],
+                    value=annual_stock_return,
                     step=0.5,
                     debounce=True,
                     show_value=_show_value,
@@ -465,7 +489,7 @@ def _(creator_step_range):
                 "annual_inflation": mo.ui.slider(
                     start=0.0,
                     stop=10.0,
-                    value=values["annual_inflation"],
+                    value=annual_inflation,
                     step=0.1,
                     debounce=True,
                     show_value=_show_value,
@@ -485,11 +509,31 @@ def _(creator_step_range):
 
 
 @app.cell
-def _(alternatives_stock, pl, time_slider, wrapper_stock_investment_monthly):
+def _(stock_investment_monthly):
+    def wrapper_stock_investment_monthly(sliders, time_slider):
+        df = stock_investment_monthly(
+            initial_investment=sliders["initial_stock_investment"].value,
+            monthly_contribution=sliders["monthly_stock_investment"].value,
+            annual_return=sliders["annual_stock_return"].value / 100,
+            years=time_slider.value,
+            annual_inflation=sliders["annual_inflation"].value / 100,
+        )
+        return df
+    return
+
+
+@app.cell
+def _(alternatives_stock, pl, stock_investment_monthly, time_slider):
     # === USE DATA ===
     df_alternatives = []
-    for i, alternative in enumerate(alternatives_stock):
-        df = wrapper_stock_investment_monthly(alternative, time_slider)
+    for i, _alternative in enumerate(alternatives_stock):
+        df = stock_investment_monthly(
+            initial_investment=_alternative["initial_stock_investment"].value,
+            monthly_contribution=_alternative["monthly_stock_investment"].value,
+            annual_return=_alternative["annual_stock_return"].value / 100,
+            years=time_slider.value,
+            annual_inflation=_alternative["annual_inflation"].value / 100,
+        )
         df = df.with_columns(pl.lit(f"Alternative {i + 1}").alias("Alternative"))
         df_alternatives.append(df)
     return (df_alternatives,)
@@ -662,20 +706,6 @@ def _(math, np):
         values = values[(values == 0) | ((values >= min_val) & (values <= max_val))]
         return np.unique(values).tolist()
     return (creator_step_range,)
-
-
-@app.cell
-def _(stock_investment_monthly):
-    def wrapper_stock_investment_monthly(sliders, time_slider):
-        df = stock_investment_monthly(
-            initial_investment=sliders["initial_stock_investment"].value,
-            monthly_contribution=sliders["monthly_stock_investment"].value,
-            annual_return=sliders["annual_stock_return"].value / 100,
-            years=time_slider.value,
-            annual_inflation=sliders["annual_inflation"].value / 100,
-        )
-        return df
-    return (wrapper_stock_investment_monthly,)
 
 
 @app.cell
