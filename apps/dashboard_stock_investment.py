@@ -105,10 +105,10 @@ def _():
 
 
 @app.cell
-def _(figure, time_slider, ui_sliders_stock):
+def _(figure_stock, time_slider, ui_sliders_stock):
     stock_page = mo.vstack(
         items=[
-            mo.hstack(items=[figure, time_slider], align="center"),
+            mo.hstack(items=[figure_stock, time_slider], align="center"),
             ui_sliders_stock,
         ]
     )
@@ -125,10 +125,10 @@ def _():
 
 
 @app.cell
-def _(figure, time_slider, ui_sliders_mortgage):
+def _(figure_mortgage, ui_sliders_mortgage):
     page_mortgage = mo.vstack(
         items=[
-            mo.hstack(items=[figure, time_slider], align="center"),
+            figure_mortgage,
             ui_sliders_mortgage,
         ]
     )
@@ -314,21 +314,26 @@ def _(creator_step_range):
 
 
 @app.cell
-def _(alternatives_mortgage, mortgage_monthly, pl):
+def _(alternatives_mortgage, mortgage_monthly, pl, plot):
     df_alternatives_mortgage = []
     for j, _alternative in enumerate(alternatives_mortgage):
         df_mortgage = mortgage_monthly(
             loan_amount=_alternative["loan_amount"].value,
-            annual_interest_rate=_alternative["annual_interest_rate"].value,
+            annual_interest_rate=_alternative["annual_interest_rate"].value / 100,
             loan_term_years=int(_alternative["loan_term_years"].value),
-            annual_inflation=_alternative["annual_inflation"].value,
+            annual_inflation=_alternative["annual_inflation"].value / 100,
             rentefradrag=False,
         )
         df_mortgage = df_mortgage.with_columns(
             pl.lit(f"Alternative {j + 1}").alias("Alternative")
         )
         df_alternatives_mortgage.append(df_mortgage)
-    return
+
+    figure_mortgage = plot(
+        df_alternatives=df_alternatives_mortgage,
+        metric_columns=["loan_balance", "principal_cum", "interest_cum"],
+    )
+    return (figure_mortgage,)
 
 
 @app.cell(column=2, hide_code=True)
@@ -509,34 +514,26 @@ def _(creator_step_range):
 
 
 @app.cell
-def _(stock_investment_monthly):
-    def wrapper_stock_investment_monthly(sliders, time_slider):
-        df = stock_investment_monthly(
-            initial_investment=sliders["initial_stock_investment"].value,
-            monthly_contribution=sliders["monthly_stock_investment"].value,
-            annual_return=sliders["annual_stock_return"].value / 100,
-            years=time_slider.value,
-            annual_inflation=sliders["annual_inflation"].value / 100,
-        )
-        return df
-    return
-
-
-@app.cell
-def _(alternatives_stock, pl, stock_investment_monthly, time_slider):
-    # === USE DATA ===
-    df_alternatives = []
+def _(alternatives_stock, pl, plot, stock_investment_monthly, time_slider):
+    df_alternatives_stock = []
     for i, _alternative in enumerate(alternatives_stock):
-        df = stock_investment_monthly(
+        df_stock = stock_investment_monthly(
             initial_investment=_alternative["initial_stock_investment"].value,
             monthly_contribution=_alternative["monthly_stock_investment"].value,
             annual_return=_alternative["annual_stock_return"].value / 100,
             years=time_slider.value,
             annual_inflation=_alternative["annual_inflation"].value / 100,
         )
-        df = df.with_columns(pl.lit(f"Alternative {i + 1}").alias("Alternative"))
-        df_alternatives.append(df)
-    return (df_alternatives,)
+        df_stock = df_stock.with_columns(
+            pl.lit(f"Alternative {i + 1}").alias("Alternative")
+        )
+        df_alternatives_stock.append(df_stock)
+
+    figure_stock = plot(
+        df_alternatives=df_alternatives_stock,
+        metric_columns=["balance", "returns_cum", "contributions_cum"],
+    )
+    return (figure_stock,)
 
 
 @app.cell(hide_code=True)
@@ -559,12 +556,6 @@ def _(FULL_WIDTH, SHOW_VALUE):
         label="Projection horizon (years)",
     )
     return (time_slider,)
-
-
-@app.cell
-def _(df_alternatives, plot):
-    figure = plot(df_alternatives=df_alternatives)
-    return (figure,)
 
 
 @app.cell(column=3, hide_code=True)
@@ -710,12 +701,12 @@ def _(math, np):
 
 @app.cell
 def _(COLORS, alt, pl):
-    def plot(df_alternatives, COLORS=COLORS):
+    def plot(df_alternatives, metric_columns=None, COLORS=COLORS):
         full_df = pl.concat(df_alternatives)
         # Transform from wide to long
         long_df = full_df.unpivot(
             index=["month", "Alternative"],
-            on=["balance", "returns_cum", "contributions_cum"],
+            on=metric_columns,
             variable_name="Metric",
             value_name="Amount",
         )
@@ -749,7 +740,7 @@ def _(COLORS, alt, pl):
                 strokeDash=alt.StrokeDash(
                     "Metric:N",
                     scale=alt.Scale(
-                        domain=["balance", "returns_cum", "contributions_cum"],
+                        domain=metric_columns,
                         range=[[], [5, 5], [2, 2]],  # Solid, Dashed, Dotted
                     ),
                     legend=alt.Legend(title="Metric Toggle"),
@@ -764,7 +755,6 @@ def _(COLORS, alt, pl):
             .properties(
                 title="Portfolio Projections - All Alternatives", width=600, height=400
             )
-            .interactive()
         )
 
         return chart
@@ -885,20 +875,24 @@ def _(apply_inflation, pl, timer):
     @timer
     def mortgage_monthly(
         loan_amount: float,
-        annual_interest_rate: float,
+        annual_interest_rate: float,  # insert the decimal, not the percentage
         loan_term_years: int,
-        annual_inflation: float = 0.0,
+        annual_inflation: float = 0.0,  # insert the decimal, not the percentage
         rentefradrag: bool = True,
     ) -> pl.DataFrame:
         n_months = loan_term_years * 12
         r_monthly = annual_interest_rate / 12.0
 
-        loan_payment = (
-            loan_amount
-            * r_monthly
-            * (1 + r_monthly) ** n_months
-            / ((1 + r_monthly) ** n_months - 1)
-        )
+        # Handle division by zero
+        if r_monthly == 0:
+            loan_payment = loan_amount / n_months
+        else:
+            loan_payment = (
+                loan_amount
+                * r_monthly
+                * (1 + r_monthly) ** n_months
+                / ((1 + r_monthly) ** n_months - 1)
+            )
 
         balance = [loan_amount]
         interest = [0.0]  # Interest paid each month
