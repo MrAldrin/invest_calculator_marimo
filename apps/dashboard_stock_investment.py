@@ -10,7 +10,7 @@
 
 import marimo
 
-__generated_with = "0.19.7"
+__generated_with = "0.20.2"
 app = marimo.App(
     width="columns",
     layout_file="layouts/dashboard_stock_investment.grid.json",
@@ -29,6 +29,7 @@ def _():
     import math
     import time
     import functools
+
     return alt, functools, math, np, pl, time
 
 
@@ -51,6 +52,7 @@ def _():
                     "#/page1": "Stock investment",
                     "#/page2": "Mortage cost",
                     "#/page3": "Info",
+                    # "#/page4": "test",
                 },
                 orientation="vertical",
             ),
@@ -60,40 +62,67 @@ def _():
 
 
 @app.cell
-def _(page_mortgage, stock_page):
-    # Page 2: info text
-    def page2():
-        return mo.vstack(
-            [
-                mo.md("## Info"),
-                mo.md(
-                    "App is created for testing and learning puroses, there are no garantee that there are no faults in the logic behind."
-                ),
-            ]
-        )
-
-
-    # Home page (optional)
-    def home():
-        header_text = mo.md("## Welcome to my investment calculator.")
-        main_text = mo.md(
-            "The only page that works for now is the stock investment page. It can show you how monthly investment can lead to big gains in the long run. You can also toy with alternative futures, by creating different scenarios and compare how the outcome changes in the long run."
-        )
-
-        return mo.vstack(items=[header_text, main_text])
-
-
+def _(page_mortgage, page_stock):
     # Route table: this is what changes when you click the menu
     mo.routes(
         {
-            "#/": home,
-            "#/page1": stock_page,
+            "#/": page_home,
+            "#/page1": page_stock,
             "#/page2": page_mortgage,
-            "#/page3": page2,
-            mo.routes.CATCH_ALL: home,
+            "#/page3": page_info,
+            # "#/page4": page_test,
+
+            mo.routes.CATCH_ALL: page_home,
         }
     )
     return
+
+
+@app.function
+def page_setup(header:str|None=None, text:any|None=None, page_content:any|None=None, footer:any|None=None):
+    mo_elem = []
+    if header:
+        mo_elem.append(mo.md(f"## {header}"))
+    if text:
+        mo_elem.append(text)
+    if page_content:
+        mo_elem.append(page_content)
+    if footer:
+        mo_elem.append(footer)
+    page = mo.vstack(
+        items=mo_elem, align="center"
+    )
+    return page
+
+
+@app.cell
+def _():
+    page_home()
+    return
+
+
+@app.function
+def page_home():
+    header_str = "Welcome to Invest Away!"
+    text = mo.md(
+        "Theis is a small app for playing around with parameters for financial settings, where you can also setup altenatives where you compare different scenarios easily! There are two calculators as of now that you find in the navigation menu."
+    )
+
+    page=page_setup(header=header_str,text=text, page_content=None,footer=None)
+
+    return page
+
+
+@app.function
+def page_info():
+    header_str = "Info"
+    text = mo.md(
+                "This app is made as a home project for fun, there are no garantees that the logic is sound."
+            )
+    
+    page=page_setup(header=header_str,text=text, page_content=None,footer=None)
+
+    return page
 
 
 @app.cell(hide_code=True)
@@ -106,14 +135,20 @@ def _():
 
 @app.cell
 def _(figure_stock, time_slider, ui_sliders_stock):
-    stock_page = mo.vstack(
-        items=[
-            mo.hstack(items=[figure_stock, time_slider], align="center"),
-            ui_sliders_stock,
-        ]
-    )
-    stock_page
-    return (stock_page,)
+    def page_stock():
+        header_text = mo.md("## Stock investment calculator")
+        text = mo.md("The calculator shows you how big the difference really is when the assumptions change! See the difference clearly in the graph by adding the alternatives an set them up how you like. A small change can lead to big gains in the long run.")
+        page = mo.vstack(
+            items=[
+                header_text,
+                text,
+                mo.hstack(items=[figure_stock, time_slider], align="center"),
+                ui_sliders_stock,
+            ], align="center"
+        )
+        return page
+
+    return (page_stock,)
 
 
 @app.cell(hide_code=True)
@@ -126,14 +161,30 @@ def _():
 
 @app.cell
 def _(figure_mortgage, ui_sliders_mortgage):
-    page_mortgage = mo.vstack(
+    def page_mortgage():
+        header_text = mo.md("## Mortgage calculator")
+        page = mo.vstack(
+            items=[
+                header_text,
+                figure_mortgage,
+                ui_sliders_mortgage,
+            ], align="center"
+        )
+        return page
+
+    return (page_mortgage,)
+
+
+@app.cell
+def _(figure_mortgage, ui_sliders_mortgage):
+    page_mortgage2 = mo.vstack(
         items=[
             figure_mortgage,
             ui_sliders_mortgage,
         ]
     )
-    page_mortgage
-    return (page_mortgage,)
+    page_mortgage2
+    return
 
 
 @app.cell(column=1, hide_code=True)
@@ -201,6 +252,7 @@ def _(COLORS):
             }
         )
         return colored_sliders
+
     return (render_scenario_sliders_mortgage,)
 
 
@@ -310,6 +362,7 @@ def _(creator_step_range):
             ),
         )
         return slider_dict
+
     return (create_scenario_sliders_mortgage,)
 
 
@@ -401,6 +454,7 @@ def _(COLORS):
             }
         )
         return colored_sliders
+
     return (render_scenario_sliders_stock,)
 
 
@@ -510,6 +564,7 @@ def _(creator_step_range):
             ),
         )
         return slider_dict
+
     return (create_scenario_sliders_stock_investment,)
 
 
@@ -589,6 +644,7 @@ def _(MAX_SCENARIOS, MIN_SCENARIOS):
             ),
         )
         return add_button, remove_button
+
     return (create_add_remove_buttons,)
 
 
@@ -618,6 +674,7 @@ def _(MAX_SCENARIOS, MIN_SCENARIOS):
             ]
         )
         return ui_sliders_alternatives
+
     return (create_slider_ui,)
 
 
@@ -696,6 +753,7 @@ def _(math, np):
         values = np.array(values)
         values = values[(values == 0) | ((values >= min_val) & (values <= max_val))]
         return np.unique(values).tolist()
+
     return (creator_step_range,)
 
 
@@ -758,6 +816,7 @@ def _(COLORS, alt, pl):
         )
 
         return chart
+
     return (plot,)
 
 
@@ -782,6 +841,7 @@ def _(functools, time):
                 print(f"{func.__name__} took {elapsed:.6f}s")
 
         return wrapper
+
     return (timer,)
 
 
@@ -801,6 +861,7 @@ def _(pl):
         )
 
         return df
+
     return (apply_inflation,)
 
 
@@ -867,6 +928,7 @@ def _(apply_inflation, pl, timer):
             ],
         )
         return df
+
     return (stock_investment_monthly,)
 
 
@@ -956,6 +1018,7 @@ def _(apply_inflation, pl, timer):
         )
 
         return df
+
     return (mortgage_monthly,)
 
 
