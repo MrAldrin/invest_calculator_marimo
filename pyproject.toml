@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "altair>=6",
-    "marimo>=0.19",
+    "marimo>=0.19.7",
     "numpy>=2.4",
     "polars>=1.36",
 ]

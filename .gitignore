@@ -181,3 +181,6 @@ test/
 .devbox
 # enforcing strict reproducibility not suitable for template
 devbox.lock
+
+# my extra stuff
+test/
