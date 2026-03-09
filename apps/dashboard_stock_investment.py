@@ -217,12 +217,6 @@ def _(
     scenarios_mortgage = get_scenarios_mortgage()
     visible_count_mortgage = get_visible_count_mortgage()
 
-    MORTGAGE_SLIDER_KEYS = [
-        "loan_amount",
-        "annual_interest_rate",
-        "loan_term_years",
-        "annual_inflation",
-    ]
     MORTGAGE_SLIDER_CONFIGS = {
         "loan_amount": {"min": 1e6, "max": 1e8, "steps": True, "label": "Loan amount"},
         "annual_interest_rate": {
@@ -253,7 +247,7 @@ def _(
             create_scenario_sliders(
                 {
                     key: {**MORTGAGE_SLIDER_CONFIGS[key], "value": scenario[key]}
-                    for key in MORTGAGE_SLIDER_KEYS
+                    for key in MORTGAGE_SLIDER_CONFIGS
                 },
                 color_index=i,
                 scenario_setter=set_scenarios_mortgage,
@@ -288,11 +282,10 @@ def _(pl):
         calc_fn,
         plot_fn,
         metric_columns: list,
-        value_map: dict,
     ):
         df_alternatives = []
         for i, _alternative in enumerate(alternatives):
-            kwargs = {key: _alternative[key].value for key in value_map.keys()}
+            kwargs = {key: _alternative[key].value for key in _alternative}
             df = calc_fn(**kwargs)
             df = df.with_columns(pl.lit(f"Alternative {i + 1}").alias("Alternative"))
             df_alternatives.append(df)
@@ -324,12 +317,6 @@ def _(
         ),
         plot_fn=plot,
         metric_columns=["loan_balance", "principal_cum", "interest_cum"],
-        value_map={
-            "loan_amount": "loan_amount",
-            "annual_interest_rate": "annual_interest_rate",
-            "loan_term_years": "loan_term_years",
-            "annual_inflation": "annual_inflation",
-        },
     )
     return (figure_mortgage,)
 
@@ -416,12 +403,6 @@ def _(
     scenarios_stock = get_scenarios_stock()
     visible_count = get_visible_count_stock()
 
-    STOCK_SLIDER_KEYS = [
-        "initial_stock_investment",
-        "monthly_stock_investment",
-        "annual_stock_return",
-        "annual_inflation",
-    ]
     STOCK_SLIDER_CONFIGS = {
         "initial_stock_investment": {
             "min": 1e4,
@@ -456,7 +437,7 @@ def _(
             create_scenario_sliders(
                 {
                     key: {**STOCK_SLIDER_CONFIGS[key], "value": scenario[key]}
-                    for key in STOCK_SLIDER_KEYS
+                    for key in STOCK_SLIDER_CONFIGS
                 },
                 color_index=i,
                 scenario_setter=set_scenarios_stock,
@@ -486,12 +467,6 @@ def _(
         ),
         plot_fn=plot,
         metric_columns=["balance", "returns_cum", "contributions_cum"],
-        value_map={
-            "initial_stock_investment": "initial_stock_investment",
-            "monthly_stock_investment": "monthly_stock_investment",
-            "annual_stock_return": "annual_stock_return",
-            "annual_inflation": "annual_inflation",
-        },
     )
     return (figure_stock,)
 
