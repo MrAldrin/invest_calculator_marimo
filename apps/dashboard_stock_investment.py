@@ -257,7 +257,7 @@ def _(
     return (alternatives_stock,)
 
 
-@app.cell
+@app.cell(column=2)
 def _(
     alternatives_stock,
     build_alternatives_and_plot,
@@ -280,7 +280,7 @@ def _(
     return (figure_stock,)
 
 
-@app.cell(column=2, hide_code=True)
+@app.cell(hide_code=True)
 def _():
     mo.md(r"""
     # Page 2: Mortgage calculator
@@ -396,25 +396,27 @@ def _(
 
 
 @app.cell
-def _(
-    alternatives_mortgage,
-    build_alternatives_and_plot,
-    mortgage_monthly,
-    plot,
-):
-    figure_mortgage = build_alternatives_and_plot(
-        alternatives=alternatives_mortgage,
-        calc_fn=lambda **kwargs: mortgage_monthly(
-            loan_amount=kwargs["loan_amount"],
-            annual_interest_rate=kwargs["annual_interest_rate"] / 100,
-            loan_term_years=int(kwargs["loan_term_years"]),
-            annual_inflation=kwargs["annual_inflation"] / 100,
-            rentefradrag=False,
-        ),
-        plot_fn=plot,
-        metric_columns=["loan_balance", "principal_cum", "interest_cum"],
-    )
-    return (figure_mortgage,)
+def _(pl):
+    def build_alternatives_and_plot(
+        alternatives,
+        calc_fn,
+        plot_fn,
+        metric_columns: list,
+    ):
+        df_alternatives = []
+        for i, _alternative in enumerate(alternatives):
+            kwargs = {key: _alternative[key].value for key in _alternative}
+            df = calc_fn(**kwargs)
+            df = df.with_columns(pl.lit(f"Alternative {i + 1}").alias("Alternative"))
+            df_alternatives.append(df)
+
+        figure = plot_fn(
+            df_alternatives=df_alternatives,
+            metric_columns=metric_columns,
+        )
+        return figure
+
+    return (build_alternatives_and_plot,)
 
 
 @app.cell(column=3, hide_code=True)
@@ -588,7 +590,29 @@ def _(creator_step_range):
     return (create_scenario_sliders,)
 
 
-@app.function(column=6)
+@app.cell(column=6)
+def _(
+    alternatives_mortgage,
+    build_alternatives_and_plot,
+    mortgage_monthly,
+    plot,
+):
+    figure_mortgage = build_alternatives_and_plot(
+        alternatives=alternatives_mortgage,
+        calc_fn=lambda **kwargs: mortgage_monthly(
+            loan_amount=kwargs["loan_amount"],
+            annual_interest_rate=kwargs["annual_interest_rate"] / 100,
+            loan_term_years=int(kwargs["loan_term_years"]),
+            annual_inflation=kwargs["annual_inflation"] / 100,
+            rentefradrag=False,
+        ),
+        plot_fn=plot,
+        metric_columns=["loan_balance", "principal_cum", "interest_cum"],
+    )
+    return (figure_mortgage,)
+
+
+@app.function
 def create_scenario_manager(default_values, max_scenarios: int = 4):
     get_scenarios, set_scenarios = mo.state([default_values] * max_scenarios)
     get_visible_count, set_visible_count = mo.state(1)
@@ -653,30 +677,6 @@ def _(COLORS, alt, pl):
         return chart
 
     return (plot,)
-
-
-@app.cell
-def _(pl):
-    def build_alternatives_and_plot(
-        alternatives,
-        calc_fn,
-        plot_fn,
-        metric_columns: list,
-    ):
-        df_alternatives = []
-        for i, _alternative in enumerate(alternatives):
-            kwargs = {key: _alternative[key].value for key in _alternative}
-            df = calc_fn(**kwargs)
-            df = df.with_columns(pl.lit(f"Alternative {i + 1}").alias("Alternative"))
-            df_alternatives.append(df)
-
-        figure = plot_fn(
-            df_alternatives=df_alternatives,
-            metric_columns=metric_columns,
-        )
-        return figure
-
-    return (build_alternatives_and_plot,)
 
 
 @app.cell(column=7, hide_code=True)
