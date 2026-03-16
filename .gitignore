@@ -183,4 +183,4 @@ test/
 devbox.lock
 
 # my extra stuff
-test/
+local_testing/
