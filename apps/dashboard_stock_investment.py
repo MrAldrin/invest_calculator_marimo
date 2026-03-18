@@ -61,40 +61,68 @@ def _():
 
 
 @app.cell
-def _(page_mortgage, stock_page):
-    # Page 2: info text
-    def page2():
-        return mo.vstack(
-            [
-                mo.md("## Info"),
-                mo.md(
-                    "App is created for testing and learning puroses, there are no garantee that there are no faults in the logic behind."
-                ),
-            ]
-        )
-
-
-    # Home page (optional)
-    def home():
-        header_text = mo.md("## Welcome to my investment calculator.")
-        main_text = mo.md(
-            "The only page that works for now is the stock investment page. It can show you how monthly investment can lead to big gains in the long run. You can also toy with alternative futures, by creating different scenarios and compare how the outcome changes in the long run."
-        )
-
-        return mo.vstack(items=[header_text, main_text])
-
-
+def _(page_mortgage, page_stock):
     # Route table: this is what changes when you click the menu
     mo.routes(
         {
-            "#/": home,
-            "#/page1": stock_page,
+            "#/": page_home,
+            "#/page1": page_stock,
             "#/page2": page_mortgage,
-            "#/page3": page2,
-            mo.routes.CATCH_ALL: home,
+            "#/page3": page_info,
+            mo.routes.CATCH_ALL: page_home,
         }
     )
     return
+
+
+@app.function
+def page_setup(
+    header: str | None = None,
+    text: object | None = None,
+    page_content: object | None = None,
+    footer: object | None = None,
+):
+    mo_elem = []
+    if header:
+        mo_elem.append(mo.md(f"## {header}"))
+    if text:
+        mo_elem.append(text)
+    if page_content:
+        mo_elem.append(page_content)
+    if footer:
+        mo_elem.append(footer)
+    page = mo.vstack(items=mo_elem, align="center")
+    return page
+
+
+@app.cell
+def _():
+    page_home()
+    return
+
+
+@app.function
+def page_home():
+    header_str = "Welcome to Invest Away!"
+    text = mo.md(
+        "This is a small app for playing around with parameters for financial settings, where you can also setup altenatives where you compare different scenarios easily! There are two calculators as of now that you find in the navigation menu."
+    )
+
+    page = page_setup(header=header_str, text=text, page_content=None, footer=None)
+
+    return page
+
+
+@app.function
+def page_info():
+    header_str = "Info"
+    text = mo.md(
+        "This app is made as a home project for fun, there are no guarantees that the logic is sound."
+    )
+
+    page = page_setup(header=header_str, text=text, page_content=None, footer=None)
+
+    return page
 
 
 @app.cell(hide_code=True)
@@ -107,14 +135,23 @@ def _():
 
 @app.cell
 def _(figure_stock, time_slider, ui_sliders_stock):
-    stock_page = mo.vstack(
-        items=[
-            mo.hstack(items=[figure_stock, time_slider], align="center"),
-            ui_sliders_stock,
-        ]
-    )
-    stock_page
-    return (stock_page,)
+    def page_stock():
+        header_text = mo.md("## Stock investment calculator")
+        text = mo.md(
+            "The calculator shows you how big the difference really is when the assumptions change! See the difference clearly in the graph by adding the alternatives an set them up how you like. A small change can lead to big gains in the long run."
+        )
+        page = mo.vstack(
+            items=[
+                header_text,
+                text,
+                mo.hstack(items=[figure_stock, time_slider], align="center"),
+                ui_sliders_stock,
+            ],
+            align="center",
+        )
+        return page
+
+    return (page_stock,)
 
 
 @app.cell(hide_code=True)
@@ -127,13 +164,18 @@ def _():
 
 @app.cell
 def _(figure_mortgage, ui_sliders_mortgage):
-    page_mortgage = mo.vstack(
-        items=[
-            figure_mortgage,
-            ui_sliders_mortgage,
-        ]
-    )
-    page_mortgage
+    def page_mortgage():
+        header_text = mo.md("## Mortgage calculator")
+        page = mo.vstack(
+            items=[
+                header_text,
+                figure_mortgage,
+                ui_sliders_mortgage,
+            ],
+            align="center",
+        )
+        return page
+
     return (page_mortgage,)
 
 
@@ -528,7 +570,10 @@ def _(MAX_SCENARIOS, MIN_SCENARIOS):
 
         ui_sliders_alternatives = mo.vstack(
             [
-                *[render_fn(alternative, i) for i, alternative in enumerate(alternatives)],
+                *[
+                    render_fn(alternative, i)
+                    for i, alternative in enumerate(alternatives)
+                ],
                 mo.hstack(
                     [
                         mo.hstack(left_buttons) if left_buttons else mo.Html(""),
@@ -557,7 +602,9 @@ def _(creator_step_range):
             {
                 key: (
                     mo.ui.slider(
-                        steps=creator_step_range(min_val=cfg["min"], max_val=cfg["max"]),
+                        steps=creator_step_range(
+                            min_val=cfg["min"], max_val=cfg["max"]
+                        ),
                         value=cfg["value"],
                         debounce=True,
                         show_value=_show_value,
@@ -580,7 +627,8 @@ def _(creator_step_range):
             },
             on_change=lambda new_vals: scenario_setter(
                 lambda scenarios: [
-                    (new_vals if i == color_index else s) for i, s in enumerate(scenarios)
+                    (new_vals if i == color_index else s)
+                    for i, s in enumerate(scenarios)
                 ]
             ),
         )
@@ -713,7 +761,10 @@ def _(apply_inflation, pl, timer):
                     (
                         initial_investment * ((1 + monthly_return) ** pl.col("month"))
                         + monthly_contribution
-                        * (((1 + monthly_return) ** pl.col("month") - 1) / monthly_return)
+                        * (
+                            ((1 + monthly_return) ** pl.col("month") - 1)
+                            / monthly_return
+                        )
                     ).alias("balance"),
                     (initial_investment + monthly_contribution * pl.col("month")).alias(
                         "contributions_cum"
@@ -722,14 +773,17 @@ def _(apply_inflation, pl, timer):
             )
             .with_columns(
                 [
-                    (pl.col("balance") - pl.col("contributions_cum")).alias("returns_cum"),
+                    (pl.col("balance") - pl.col("contributions_cum")).alias(
+                        "returns_cum"
+                    ),
                 ]
             )
             .with_columns(
                 [
                     (pl.col("returns_cum") * (1 - tax_rate)).alias("returns_after_tax"),
                     (
-                        pl.col("contributions_cum") + pl.col("returns_cum") * (1 - tax_rate)
+                        pl.col("contributions_cum")
+                        + pl.col("returns_cum") * (1 - tax_rate)
                     ).alias("stock_equity"),
                 ]
             )

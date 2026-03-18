@@ -56,7 +56,7 @@ def _(df):
     ### Dataset Overview
 
     - Total records: {df.height}
-    - Columns: {', '.join(df.columns)}
+    - Columns: {", ".join(df.columns)}
 
     ### Summary Statistics
 
