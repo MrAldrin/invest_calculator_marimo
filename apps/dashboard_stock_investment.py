@@ -150,7 +150,7 @@ def _():
 
 
 @app.cell
-def _(figure_stock, time_slider, ui_sliders_stock):
+def _(figure_stock, metrics_stock, time_slider, ui_sliders_stock):
     def page_stock():
         header_text = "Stock investment calculator"
         text = mo.md(
@@ -163,7 +163,10 @@ def _(figure_stock, time_slider, ui_sliders_stock):
             page_content=mo.vstack(
                 items=[
                     mo.vstack(
-                        [mo.hstack(items=[figure_stock, time_slider], align="center")],
+                        [
+                            mo.hstack(items=[figure_stock, time_slider], align="center"),
+                            metrics_stock,
+                        ],
                         align="center",
                     ),
                     ui_sliders_stock,
@@ -185,14 +188,14 @@ def _():
 
 
 @app.cell
-def _(figure_mortgage, ui_sliders_mortgage):
+def _(figure_mortgage, metrics_mortgage, ui_sliders_mortgage):
     def page_mortgage():
         header_text = "Mortgage calculator"
         page = page_setup(
             header=header_text,
             page_content=mo.vstack(
                 items=[
-                    mo.vstack([figure_mortgage], align="center"),
+                    mo.vstack([figure_mortgage, metrics_mortgage], align="center"),
                     ui_sliders_mortgage,
                 ],
                 align="stretch",
@@ -322,15 +325,16 @@ def _(
     return (alternatives_stock,)
 
 
-@app.cell(column=2)
+@app.cell
 def _(
     alternatives_stock,
-    build_alternatives_and_plot,
+    build_alternatives,
     plot,
+    render_stock_metrics,
     stock_investment_monthly,
     time_slider,
 ):
-    figure_stock = build_alternatives_and_plot(
+    df_alternatives_stock = build_alternatives(
         alternatives=alternatives_stock,
         calc_fn=lambda **kwargs: stock_investment_monthly(
             initial_investment=kwargs["initial_stock_investment"],
@@ -339,13 +343,16 @@ def _(
             years=time_slider.value,
             annual_inflation=kwargs["annual_inflation"] / 100,
         ),
-        plot_fn=plot,
+    )
+    figure_stock = plot(
+        df_alternatives=df_alternatives_stock,
         metric_columns=["balance", "returns_cum", "contributions_cum"],
     )
-    return (figure_stock,)
+    metrics_stock = render_stock_metrics(df_alternatives_stock)
+    return figure_stock, metrics_stock
 
 
-@app.cell(hide_code=True)
+@app.cell(column=2, hide_code=True)
 def _():
     mo.md(r"""
     # Page 2: Mortgage calculator
@@ -462,11 +469,9 @@ def _(
 
 @app.cell
 def _(pl):
-    def build_alternatives_and_plot(
+    def build_alternatives(
         alternatives,
         calc_fn,
-        plot_fn,
-        metric_columns: list,
     ):
         df_alternatives = []
         for i, _alternative in enumerate(alternatives):
@@ -474,42 +479,123 @@ def _(pl):
             df = calc_fn(**kwargs)
             df = df.with_columns(pl.lit(f"Alternative {i + 1}").alias("Alternative"))
             df_alternatives.append(df)
+        return df_alternatives
 
-        figure = plot_fn(
-            df_alternatives=df_alternatives,
-            metric_columns=metric_columns,
+    return (build_alternatives,)
+
+
+@app.cell
+def _(COLORS):
+    def render_stock_metrics(df_alternatives):
+        cards = []
+        for i, df in enumerate(df_alternatives):
+            color = COLORS[i % len(COLORS)]
+            last_row = df.row(-1, named=True)
+            balance = f"{last_row['balance']:,.0f}".replace(",", " ")
+            contrib = f"{last_row['contributions_cum']:,.0f}".replace(",", " ")
+            returns = f"{last_row['returns_cum']:,.0f}".replace(",", " ")
+
+            card = mo.vstack(
+                [
+                    mo.stat(value=str(balance), label="Final Balance").style(
+                        {"color": color}
+                    ),
+                    mo.stat(value=str(contrib), label="Total Contributions"),
+                    mo.stat(value=str(returns), label="Total Return"),
+                ]
+            ).style(
+                {
+                    "border-top": f"4px solid {color}",
+                    "padding": "10px",
+                    "background": "rgba(128,128,128,0.05)",
+                    "border-radius": "5px",
+                    "flex": "1",
+                }
+            )
+            cards.append(card)
+        return mo.hstack(cards, gap=2).style(
+            {"width": "100%", "margin-top": "20px", "justify-content": "center"}
         )
-        return figure
 
-    return (build_alternatives_and_plot,)
+
+    def render_mortgage_metrics(df_alternatives):
+        cards = []
+        for i, df in enumerate(df_alternatives):
+            color = COLORS[i % len(COLORS)]
+            last_row = df.row(-1, named=True)
+            first_row = df.row(1, named=True)  # month 1
+
+            payment = f"{first_row['loan_payment']:,.0f}".replace(",", " ")
+            interest = f"{last_row['interest_cum']:,.0f}".replace(",", " ")
+            total_cost = (
+                f"{last_row['principal_cum'] + last_row['interest_cum']:,.0f}".replace(
+                    ",", " "
+                )
+            )
+
+            card = mo.vstack(
+                [
+                    mo.stat(value=str(payment), label="Monthly Payment").style(
+                        {"color": color}
+                    ),
+                    mo.stat(value=str(interest), label="Total Interest"),
+                    mo.stat(value=str(total_cost), label="Total Cost"),
+                ]
+            ).style(
+                {
+                    "border-top": f"4px solid {color}",
+                    "padding": "10px",
+                    "background": "rgba(128,128,128,0.05)",
+                    "border-radius": "5px",
+                    "flex": "1",
+                }
+            )
+            cards.append(card)
+        return mo.hstack(cards, gap=2).style(
+            {"width": "100%", "margin-top": "20px", "justify-content": "center"}
+        )
+
+    return render_mortgage_metrics, render_stock_metrics
+
+
+@app.cell
+def _(
+    alternatives_mortgage,
+    build_alternatives,
+    mortgage_monthly,
+    plot,
+    render_mortgage_metrics,
+):
+    df_alternatives_mortgage = build_alternatives(
+        alternatives=alternatives_mortgage,
+        calc_fn=lambda **kwargs: mortgage_monthly(
+            loan_amount=kwargs["loan_amount"],
+            annual_interest_rate=kwargs["annual_interest_rate"] / 100,
+            loan_term_years=int(kwargs["loan_term_years"]),
+            annual_inflation=kwargs["annual_inflation"] / 100,
+            rentefradrag=False,
+        ),
+    )
+    figure_mortgage = plot(
+        df_alternatives=df_alternatives_mortgage,
+        metric_columns=["loan_balance", "principal_cum", "interest_cum"],
+    )
+    metrics_mortgage = render_mortgage_metrics(df_alternatives_mortgage)
+    return figure_mortgage, metrics_mortgage
 
 
 @app.cell(column=3, hide_code=True)
 def _():
     mo.md(r"""
-    # Comon elements
+    # Shared logic
     """)
     return
 
 
-@app.cell
-def _(FULL_WIDTH, SHOW_VALUE):
-    time_slider = mo.ui.slider(
-        start=1,
-        stop=30,
-        value=20,
-        debounce=True,
-        show_value=SHOW_VALUE,
-        full_width=FULL_WIDTH,
-        label="Projection horizon (years)",
-    )
-    return (time_slider,)
-
-
-@app.cell(column=4, hide_code=True)
+@app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    # Constants
+    ## Comon elements
     """)
     return
 
@@ -535,7 +621,29 @@ def _():
     return COLORS, FULL_WIDTH, MAX_SCENARIOS, MIN_SCENARIOS, SHOW_VALUE
 
 
-@app.cell(column=5, hide_code=True)
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Constants
+    """)
+    return
+
+
+@app.cell
+def _(FULL_WIDTH, SHOW_VALUE):
+    time_slider = mo.ui.slider(
+        start=1,
+        stop=30,
+        value=20,
+        debounce=True,
+        show_value=SHOW_VALUE,
+        full_width=FULL_WIDTH,
+        label="Projection horizon (years)",
+    )
+    return (time_slider,)
+
+
+@app.cell(column=4, hide_code=True)
 def _():
     mo.md(r"""
     ## Sliders
@@ -655,29 +763,7 @@ def _(creator_step_range):
     return (create_scenario_sliders,)
 
 
-@app.cell(column=6)
-def _(
-    alternatives_mortgage,
-    build_alternatives_and_plot,
-    mortgage_monthly,
-    plot,
-):
-    figure_mortgage = build_alternatives_and_plot(
-        alternatives=alternatives_mortgage,
-        calc_fn=lambda **kwargs: mortgage_monthly(
-            loan_amount=kwargs["loan_amount"],
-            annual_interest_rate=kwargs["annual_interest_rate"] / 100,
-            loan_term_years=int(kwargs["loan_term_years"]),
-            annual_inflation=kwargs["annual_inflation"] / 100,
-            rentefradrag=False,
-        ),
-        plot_fn=plot,
-        metric_columns=["loan_balance", "principal_cum", "interest_cum"],
-    )
-    return (figure_mortgage,)
-
-
-@app.function
+@app.function(column=5)
 def create_scenario_manager(default_values, max_scenarios: int = 4):
     get_scenarios, set_scenarios = mo.state([default_values] * max_scenarios)
     get_visible_count, set_visible_count = mo.state(1)
@@ -744,7 +830,7 @@ def _(COLORS, alt, pl):
     return (plot,)
 
 
-@app.cell(column=7, hide_code=True)
+@app.cell(column=6, hide_code=True)
 def _():
     mo.md(r"""
     ## Calculator functions
@@ -762,7 +848,7 @@ def _(apply_inflation, pl, timer):
         years: int,
         annual_inflation: float = 0.0,
         tax_rate: float = 0.3784,
-    ) -> pl.DataFrame:
+    ) -> "pl.DataFrame":
         n_months = years * 12
         monthly_return = (1 + annual_return) ** (1 / 12) - 1
 
@@ -825,7 +911,7 @@ def _(apply_inflation, pl, timer):
         loan_term_years: int,
         annual_inflation: float = 0.0,
         rentefradrag: bool = True,
-    ) -> pl.DataFrame:
+    ) -> "pl.DataFrame":
         n_months = loan_term_years * 12
         r_monthly = annual_interest_rate / 12.0
 
@@ -905,7 +991,7 @@ def _(apply_inflation, pl, timer):
     return (mortgage_monthly,)
 
 
-@app.cell(column=8, hide_code=True)
+@app.cell(column=7, hide_code=True)
 def _():
     mo.md(r"""
     ## General
@@ -960,8 +1046,8 @@ def _(math, np):
 @app.cell
 def _(pl):
     def apply_inflation(
-        df: pl.DataFrame, annual_inflation: float, columns: list[str]
-    ) -> pl.DataFrame:
+        df: "pl.DataFrame", annual_inflation: float, columns: list[str]
+    ) -> "pl.DataFrame":
         if annual_inflation == 0.0:
             return df
 
