@@ -10,7 +10,7 @@
 
 import marimo
 
-__generated_with = "0.20.4"
+__generated_with = "0.21.1"
 app = marimo.App(
     width="columns",
     layout_file="layouts/dashboard_stock_investment.grid.json",
@@ -37,6 +37,14 @@ def _():
 def _():
     mo.md(r"""
     # App elements
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # Calculatorinator
     """)
     return
 
@@ -84,21 +92,29 @@ def page_setup(
 ):
     mo_elem = []
     if header:
-        mo_elem.append(mo.md(f"## {header}"))
+        mo_elem.append(
+            mo.vstack([mo.md(f"## {header}")]).style({"text-align": "center"})
+        )
     if text:
-        mo_elem.append(text)
+        mo_elem.append(
+            mo.vstack([text]).style(
+                {
+                    "max-width": "800px",
+                    "margin": "0 auto",
+                    "padding": "1rem 2rem",
+                    "line-height": "1.6",
+                    "text-align": "center",
+                }
+            )
+        )
     if page_content:
         mo_elem.append(page_content)
     if footer:
         mo_elem.append(footer)
-    page = mo.vstack(items=mo_elem, align="center")
-    return page
 
-
-@app.cell
-def _():
-    page_home()
-    return
+    return mo.vstack(items=mo_elem, align="stretch", gap=2).style(
+        {"padding": "2rem", "width": "100%"}
+    )
 
 
 @app.function
@@ -136,18 +152,24 @@ def _():
 @app.cell
 def _(figure_stock, time_slider, ui_sliders_stock):
     def page_stock():
-        header_text = mo.md("## Stock investment calculator")
+        header_text = "Stock investment calculator"
         text = mo.md(
             "The calculator shows you how big the difference really is when the assumptions change! See the difference clearly in the graph by adding the alternatives an set them up how you like. A small change can lead to big gains in the long run."
         )
-        page = mo.vstack(
-            items=[
-                header_text,
-                text,
-                mo.hstack(items=[figure_stock, time_slider], align="center"),
-                ui_sliders_stock,
-            ],
-            align="center",
+
+        page = page_setup(
+            header=header_text,
+            text=text,
+            page_content=mo.vstack(
+                items=[
+                    mo.vstack(
+                        [mo.hstack(items=[figure_stock, time_slider], align="center")],
+                        align="center",
+                    ),
+                    ui_sliders_stock,
+                ],
+                align="stretch",
+            ),
         )
         return page
 
@@ -165,14 +187,16 @@ def _():
 @app.cell
 def _(figure_mortgage, ui_sliders_mortgage):
     def page_mortgage():
-        header_text = mo.md("## Mortgage calculator")
-        page = mo.vstack(
-            items=[
-                header_text,
-                figure_mortgage,
-                ui_sliders_mortgage,
-            ],
-            align="center",
+        header_text = "Mortgage calculator"
+        page = page_setup(
+            header=header_text,
+            page_content=mo.vstack(
+                items=[
+                    mo.vstack([figure_mortgage], align="center"),
+                    ui_sliders_mortgage,
+                ],
+                align="stretch",
+            ),
         )
         return page
 
@@ -570,10 +594,7 @@ def _(MAX_SCENARIOS, MIN_SCENARIOS):
 
         ui_sliders_alternatives = mo.vstack(
             [
-                *[
-                    render_fn(alternative, i)
-                    for i, alternative in enumerate(alternatives)
-                ],
+                *[render_fn(alternative, i) for i, alternative in enumerate(alternatives)],
                 mo.hstack(
                     [
                         mo.hstack(left_buttons) if left_buttons else mo.Html(""),
@@ -602,9 +623,7 @@ def _(creator_step_range):
             {
                 key: (
                     mo.ui.slider(
-                        steps=creator_step_range(
-                            min_val=cfg["min"], max_val=cfg["max"]
-                        ),
+                        steps=creator_step_range(min_val=cfg["min"], max_val=cfg["max"]),
                         value=cfg["value"],
                         debounce=True,
                         show_value=_show_value,
@@ -627,8 +646,7 @@ def _(creator_step_range):
             },
             on_change=lambda new_vals: scenario_setter(
                 lambda scenarios: [
-                    (new_vals if i == color_index else s)
-                    for i, s in enumerate(scenarios)
+                    (new_vals if i == color_index else s) for i, s in enumerate(scenarios)
                 ]
             ),
         )
@@ -761,10 +779,7 @@ def _(apply_inflation, pl, timer):
                     (
                         initial_investment * ((1 + monthly_return) ** pl.col("month"))
                         + monthly_contribution
-                        * (
-                            ((1 + monthly_return) ** pl.col("month") - 1)
-                            / monthly_return
-                        )
+                        * (((1 + monthly_return) ** pl.col("month") - 1) / monthly_return)
                     ).alias("balance"),
                     (initial_investment + monthly_contribution * pl.col("month")).alias(
                         "contributions_cum"
@@ -773,17 +788,14 @@ def _(apply_inflation, pl, timer):
             )
             .with_columns(
                 [
-                    (pl.col("balance") - pl.col("contributions_cum")).alias(
-                        "returns_cum"
-                    ),
+                    (pl.col("balance") - pl.col("contributions_cum")).alias("returns_cum"),
                 ]
             )
             .with_columns(
                 [
                     (pl.col("returns_cum") * (1 - tax_rate)).alias("returns_after_tax"),
                     (
-                        pl.col("contributions_cum")
-                        + pl.col("returns_cum") * (1 - tax_rate)
+                        pl.col("contributions_cum") + pl.col("returns_cum") * (1 - tax_rate)
                     ).alias("stock_equity"),
                 ]
             )
